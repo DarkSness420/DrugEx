@@ -144,6 +144,9 @@ def get_git_info():
     """
 
     import drugex
+    import git
+    import logging
+
     path = drugex.__path__[0]
     logging.debug(f"Package path: {path}")
     is_pip_package = "site-packages" in path
@@ -155,22 +158,41 @@ def get_git_info():
         logging.info(f"Version info [from pip]: {info}")
     else:
         # If git repo
-        repo = git.Repo(search_parent_directories=True)
-        # Get git hash
-        git_hash = repo.head.object.hexsha[:8]
-        # Get git branch
-        try :
-            branch = repo.active_branch.name
-        except TypeError:
-            branch = "detached HEAD"
-        # Get git tag
-        tag = repo.tags[-1].name
-        # Get number of commits between current commit and last tag
-        ncommits = len(list(repo.iter_commits(f"{tag}..HEAD")))
-        # Check if repo is dirty
-        dirty = repo.is_dirty()
-        info = f"({branch}) {tag}+{ncommits}[{git_hash}]+{'dirty' if dirty else ''} "
-        logging.info(f"Version info [from git repo]: {info}")
+        try:
+            repo = git.Repo(search_parent_directories=True)
+            
+            # Get git hash
+            git_hash = repo.head.object.hexsha[:8]
+            
+            # Get git branch
+            try:
+                branch = repo.active_branch.name
+            except TypeError:
+                branch = "detached HEAD"
+            
+            # Get git tag
+            tags = repo.tags
+            if tags:
+                tag = tags[-1].name  # Get the last tag if it exists
+            else:
+                tag = "No tags available"  # Handle case where no tags are found
+                logging.warning("No tags found in the repository.")
+            
+            # Get number of commits between current commit and last tag
+            ncommits = len(list(repo.iter_commits(f"{tag}..HEAD"))) if tag != "No tags available" else 0
+            
+            # Check if repo is dirty
+            dirty = repo.is_dirty()
+            
+            # Prepare version info
+            info = f"({branch}) {tag}+{ncommits}[{git_hash}]+{'dirty' if dirty else ''} "
+            logging.info(f"Version info [from git repo]: {info}")
+        
+        except Exception as e:
+            logging.error(f"Failed to get Git info: {e}")
+            info = "Failed to retrieve Git info"
+
+    return info
 
 def get_runid(log_folder='logs', old=True, id=None):
     """
