@@ -43,9 +43,12 @@ class SequenceRNN(Generator):
         -------
         None
         """
-        self.device = torch.device(f'cuda:{gpus[0]}')
+        if gpus and gpus[0] >= 0:
+            self.device = torch.device(f'cuda:{gpus[0]}')
+        else:
+            self.device = torch.device('cpu')
         self.to(self.device)
-        self.gpus = (gpus[0],)
+        self.gpus = (gpus[0],) if gpus else ()
 
 
     def forward(self, input, h):
